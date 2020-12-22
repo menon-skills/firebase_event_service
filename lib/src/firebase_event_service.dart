@@ -56,7 +56,7 @@ extension _DocumentSnaphotToEventMapper on DocumentSnapshot {
       });
       final newPath = collectionNames.join('/');
 
-      return mapper.mapToEvent(newPath, collectionNames, documentIds);
+      return mapper.mapToEvent<T>(newPath, collectionNames, documentIds);
     }
     return null;
   }
