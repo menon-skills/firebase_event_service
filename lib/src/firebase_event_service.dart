@@ -46,7 +46,7 @@ extension _DocumentSnaphotToEventMapper on DocumentSnapshot {
   T toEvent<T>(EventMapper mapper, String rootDocumentPath) {
     final path = reference.path;
     if (path.startsWith(rootDocumentPath)) {
-      final parts = path.replaceAll('/$rootDocumentPath', '').split('/');
+      final parts = path.replaceAll('$rootDocumentPath/', '').split('/');
       var collectionNames = <String>[];
       var documentIds = <String>[];
       parts.asMap().forEach((key, value) {
