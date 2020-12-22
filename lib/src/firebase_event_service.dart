@@ -30,7 +30,7 @@ class FirebaseEventService with FirestoreRefs implements EventService {
 
   @override
   void publishEvent(event) {
-    final documentRef = eventDocumentRef(_rootDocumentPath, event.writePath());
+    final documentRef = eventDocumentRef(_rootDocumentPath, _mapper.publishPathForEvent(event));
     documentRef.set(<String, dynamic>{
       'date': FieldValue.serverTimestamp(),
     });
