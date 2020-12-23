@@ -8,57 +8,55 @@ import 'firebase/firebase_references.dart';
 
 class FirebaseEventService with FirestoreRefs implements EventService {
   final EventMapper _mapper;
-  final String _rootDocumentPath;
+  final String _rootCollectionPath;
 
-  FirebaseEventService({EventMapper mapper, String rootDocumentPath = 'events/event_service'})
+  FirebaseEventService({EventMapper mapper, String rootCollectionPath = 'events'})
       : assert(mapper != null),
-        assert(rootDocumentPath != null),
-        assert(rootDocumentPath.split('/').length % 2 == 0),
-        assert(!rootDocumentPath.startsWith('/')),
-        assert(!rootDocumentPath.endsWith('/')),
+        assert(rootCollectionPath != null),
+        assert(rootCollectionPath.split('/').length % 1 == 0),
+        assert(!rootCollectionPath.startsWith('/')),
+        assert(!rootCollectionPath.endsWith('/')),
         _mapper = mapper,
-        _rootDocumentPath = rootDocumentPath;
+        _rootCollectionPath = rootCollectionPath;
 
   @override
   Stream<T> listen<T>({EventFilter filter}) {
-    return eventCollectionRef(_rootDocumentPath, _mapper.listenPathForFilter(filter))
-        .where('date', isGreaterThan: DateTime.now())
-        .snapshots()
-        .map(
+    final query = eventCollectionRef(_rootCollectionPath, _mapper.listenPathForFilter(filter))
+        .where('date', isGreaterThan: DateTime.now());
+    return _createQuery(query, _mapper.filterAttributes(filter)).orderBy('date').snapshots().map(
           (querySnapshot) =>
-              querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first.toEvent<T>(_mapper, _rootDocumentPath) : null,
+              querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first.toEvent<T>(_mapper, _rootCollectionPath) : null,
         );
   }
 
   @override
   void publishEvent(event) {
-    final documentRef = eventDocumentRef(_rootDocumentPath, _mapper.publishPathForEvent(event));
-    documentRef.set(<String, dynamic>{
-      'date': FieldValue.serverTimestamp(),
-    });
+    final documentRef = eventDocumentRef(_rootCollectionPath, _mapper.publishPathForEvent(event));
+    var eventAttributes = _mapper.eventAttributes(event);
+    eventAttributes['date'] = FieldValue.serverTimestamp();
+    documentRef.set(eventAttributes);
   }
 
   @override
   void destroy() {}
+
+  Query _createQuery(Query query, Map<String, dynamic> filterAttributes) {
+    var modifiedQuery = query;
+    for (final filterAttribute in filterAttributes.keys) {
+      modifiedQuery = query.where(filterAttribute, isEqualTo: filterAttributes[filterAttribute]);
+    }
+    return modifiedQuery;
+  }
 }
 
 extension _DocumentSnaphotToEventMapper on DocumentSnapshot {
   T toEvent<T>(EventMapper mapper, String rootDocumentPath) {
     final path = reference.path;
     if (path.startsWith(rootDocumentPath)) {
-      final parts = path.replaceAll('$rootDocumentPath/', '').split('/');
-      var collectionNames = <String>[];
-      var documentIds = <String>[];
-      parts.asMap().forEach((key, value) {
-        if (key % 2 == 0) {
-          collectionNames.add(value);
-        } else {
-          documentIds.add(value);
-        }
-      });
-      final newPath = collectionNames.join('/');
+      final realPath = path.replaceAll('$rootDocumentPath/', '');
+      final eventData = data();
 
-      return mapper.mapToEvent<T>(newPath, collectionNames, documentIds);
+      return mapper.mapToEvent<T>(realPath, eventData);
     }
     return null;
   }
