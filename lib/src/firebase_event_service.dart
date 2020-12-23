@@ -6,6 +6,9 @@ import 'package:event_service/event_service.dart';
 import 'event_mapper.dart';
 import 'firebase/firebase_references.dart';
 
+String _eventDateKey = 'event_date';
+String _eventIdentifierKey = 'event_identifier';
+
 class FirebaseEventService with FirestoreRefs implements EventService {
   final EventMapper _mapper;
   final String _rootCollectionPath;
@@ -22,8 +25,11 @@ class FirebaseEventService with FirestoreRefs implements EventService {
   @override
   Stream<T> listen<T>({EventFilter filter}) {
     final query = eventCollectionRef(_rootCollectionPath, _mapper.listenPathForFilter(filter))
-        .where('date', isGreaterThan: DateTime.now());
-    return _createQuery(query, _mapper.filterAttributes(filter)).orderBy('date').snapshots().map(
+        .where(_eventDateKey, isGreaterThan: DateTime.now());
+    return _createQuery(query, _mapper.filterEventIdentifier(filter), _mapper.filterAttributes(filter))
+        .orderBy(_eventDateKey)
+        .snapshots()
+        .map(
           (querySnapshot) =>
               querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first.toEvent<T>(_mapper, _rootCollectionPath) : null,
         );
@@ -33,17 +39,23 @@ class FirebaseEventService with FirestoreRefs implements EventService {
   void publishEvent(event) {
     final documentRef = eventDocumentRef(_rootCollectionPath, _mapper.publishPathForEvent(event));
     var eventAttributes = _mapper.eventAttributes(event);
-    eventAttributes['date'] = FieldValue.serverTimestamp();
+    eventAttributes[_eventDateKey] = FieldValue.serverTimestamp();
+    eventAttributes[_eventIdentifierKey] = _mapper.eventIdentifier(event);
     documentRef.set(eventAttributes);
   }
 
   @override
   void destroy() {}
 
-  Query _createQuery(Query query, Map<String, dynamic> filterAttributes) {
+  Query _createQuery(Query query, String filterEventIdentifier, Map<String, dynamic> filterAttributes) {
     var modifiedQuery = query;
-    for (final filterAttribute in filterAttributes.keys) {
-      modifiedQuery = query.where(filterAttribute, isEqualTo: filterAttributes[filterAttribute]);
+    if (filterEventIdentifier != null) {
+      modifiedQuery = query.where(_eventIdentifierKey, isEqualTo: filterEventIdentifier);
+    }
+    if (filterAttributes != null) {
+      for (final filterAttribute in filterAttributes.keys) {
+        modifiedQuery = query.where(filterAttribute, isEqualTo: filterAttributes[filterAttribute]);
+      }
     }
     return modifiedQuery;
   }
@@ -55,8 +67,11 @@ extension _DocumentSnaphotToEventMapper on DocumentSnapshot {
     if (path.startsWith(rootDocumentPath)) {
       final realPath = path.replaceAll('$rootDocumentPath/', '');
       final eventData = data();
+      final eventIdentifier = eventData.remove(_eventIdentifierKey);
+      final eventTimestamp = eventData.remove(_eventDateKey) as Timestamp;
+      final eventDate = eventTimestamp.toDate();
 
-      return mapper.mapToEvent<T>(realPath, eventData);
+      return mapper.mapToEvent<T>(eventIdentifier, eventDate, realPath, eventData);
     }
     return null;
   }
