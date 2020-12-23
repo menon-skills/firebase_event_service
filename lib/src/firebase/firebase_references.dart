@@ -12,14 +12,14 @@ mixin FirestoreRefs {
   }
 
   CollectionReference eventCollectionRef(String rootCollectionPath, String path) {
-    if (path == null) {
+    if (path == null || path.isEmpty) {
       return collectionRef(rootCollectionPath);
     }
     return collectionRef('$rootCollectionPath/$path');
   }
 
   DocumentReference eventDocumentRef(String rootCollectionPath, String path) {
-    if (path == null || path.split('/').length % 2 == 0) {
+    if (path == null || path.isEmpty || path.split('/').length % 2 == 0) {
       return eventCollectionRef(rootCollectionPath, path).doc();
     }
     return documentRef('$rootCollectionPath/$path');
