@@ -11,12 +11,17 @@ mixin FirestoreRefs {
     return _db.doc(path);
   }
 
-  CollectionReference eventCollectionRef(String rootDocumentPath, String path) {
-    return collectionRef('$rootDocumentPath/$path');
+  CollectionReference eventCollectionRef(String rootCollectionPath, String path) {
+    if (path == null) {
+      return collectionRef(rootCollectionPath);
+    }
+    return collectionRef('$rootCollectionPath/$path');
   }
 
-  DocumentReference eventDocumentRef(String rootDocumentPath, String path) {
-    return documentRef('$rootDocumentPath/$path');
+  DocumentReference eventDocumentRef(String rootCollectionPath, String path) {
+    if (path == null || path.split('/').length % 2 == 0) {
+      return eventCollectionRef(rootCollectionPath, path).doc();
+    }
+    return documentRef('$rootCollectionPath/$path');
   }
-
 }
