@@ -1,6 +1,6 @@
 name: firebase_event_service
 description: An event service that distributes events over multiple client. Based on Firestore.
-version: 0.0.3+2
+version: 0.0.3+3
 homepage: https://www.menon.group
 repository: https://github.com/menon-skills/firebase_event_service
 
