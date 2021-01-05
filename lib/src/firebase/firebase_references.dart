@@ -1,27 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 mixin FirestoreRefs {
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
-
-  CollectionReference collectionRef(String path) {
-    return _db.collection(path);
+  CollectionReference collectionRef(FirebaseFirestore db, String path) {
+    return db.collection(path);
   }
 
-  DocumentReference documentRef(String path) {
-    return _db.doc(path);
+  DocumentReference documentRef(FirebaseFirestore db, String path) {
+    return db.doc(path);
   }
 
-  CollectionReference eventCollectionRef(String rootCollectionPath, String path) {
+  CollectionReference eventCollectionRef(FirebaseFirestore db, String rootCollectionPath, String path) {
     if (path == null || path.isEmpty) {
-      return collectionRef(rootCollectionPath);
+      return collectionRef(db, rootCollectionPath);
     }
-    return collectionRef('$rootCollectionPath/$path');
+    return collectionRef(db, '$rootCollectionPath/$path');
   }
 
-  DocumentReference eventDocumentRef(String rootCollectionPath, String path) {
+  DocumentReference eventDocumentRef(FirebaseFirestore db, String rootCollectionPath, String path) {
     if (path == null || path.isEmpty || path.split('/').length % 2 == 0) {
-      return eventCollectionRef(rootCollectionPath, path).doc();
+      return eventCollectionRef(db, rootCollectionPath, path).doc();
     }
-    return documentRef('$rootCollectionPath/$path');
+    return documentRef(db, '$rootCollectionPath/$path');
   }
 }

@@ -8,6 +8,7 @@ import 'firebase/firebase_references.dart';
 
 class FirebaseEventService with FirestoreRefs implements EventService {
   final EventMapper _mapper;
+  final FirebaseFirestore _db;
   final String _rootCollectionPath;
   final DateTime _eventsAfter;
   final String _eventDateKey;
@@ -15,6 +16,7 @@ class FirebaseEventService with FirestoreRefs implements EventService {
 
   FirebaseEventService(
       {EventMapper mapper,
+      FirebaseFirestore db,
       String rootCollectionPath = 'events',
       DateTime eventsAfter,
       String eventDateKey,
@@ -26,13 +28,14 @@ class FirebaseEventService with FirestoreRefs implements EventService {
         assert(!rootCollectionPath.endsWith('/')),
         _mapper = mapper,
         _rootCollectionPath = rootCollectionPath,
+        _db = db ?? FirebaseFirestore.instance,
         _eventsAfter = eventsAfter ?? DateTime.now(),
         _eventDateKey = eventDateKey ?? 'event_date',
         _eventIdentifierKey = eventIdentifierKey ?? 'event_identifier';
 
   @override
   Stream<T> listen<T>({EventFilter filter}) {
-    final query = eventCollectionRef(_rootCollectionPath, _mapper.listenPathForFilter(filter))
+    final query = eventCollectionRef(_db, _rootCollectionPath, _mapper.listenPathForFilter(filter))
         .where(_eventDateKey, isGreaterThan: _eventsAfter);
     return _createQuery(query, _mapper.filterEventIdentifier(filter), _mapper.filterAttributes(filter))
         .orderBy(_eventDateKey, descending: false)
@@ -46,7 +49,7 @@ class FirebaseEventService with FirestoreRefs implements EventService {
 
   @override
   void publishEvent(event) {
-    final documentRef = eventDocumentRef(_rootCollectionPath, _mapper.publishPathForEvent(event));
+    final documentRef = eventDocumentRef(_db, _rootCollectionPath, _mapper.publishPathForEvent(event));
     var eventAttributes = _mapper.eventAttributes(event);
     eventAttributes[_eventDateKey] = FieldValue.serverTimestamp();
     eventAttributes[_eventIdentifierKey] = _mapper.eventIdentifier(event);
